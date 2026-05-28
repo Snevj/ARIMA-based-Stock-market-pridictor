@@ -61,6 +61,7 @@ df1.head(3)
 # Setting the Date as Index
 df_ts = df1.set_index('Date')
 df_ts.sort_index(inplace=True)
+df_ts = df_ts.asfreq('B')  # 'B' = business days, this will help us to identify the missing dates in the data
 print (type(df_ts))
 print (df_ts.head(3))
 print ("========================")
