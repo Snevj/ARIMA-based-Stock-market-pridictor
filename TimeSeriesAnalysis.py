@@ -22,20 +22,21 @@ import matplotlib.pyplot as plt
 # In[137]:
 
 
-from statsmodels.tsa.arima_model import ARIMA
+from statsmodels.tsa.arima.model import ARIMA
 import statsmodels.api as sm
 import statsmodels.tsa.api as smt
 import statsmodels.formula.api as smf
 
 from sklearn.metrics import mean_squared_error
 
-get_ipython().run_line_magic('matplotlib', 'inline')
-
+#get_ipython().run_line_magic('matplotlib', 'inline')
+import matplotlib
+matplotlib.use('Agg')
 
 # In[138]:
 
 
-df = pd.read_csv('aapl.csv', parse_dates=['Date'])
+df = pd.read_csv('Dataset/aapl.csv', parse_dates=['Date'])
 df.head(3)
 
 
@@ -88,8 +89,7 @@ df_ts.index
 # In[145]:
 
 
-df_ts.Close.fillna(method='pad', inplace=True)
-
+df_ts['Close'] = df_ts['Close'].ffill()
 
 # In[146]:
 
@@ -152,7 +152,10 @@ plt.show(block=False)
 
 orig=plt.plot(ts, color='blue', label='Original')
 mean=plt.plot(rolmean, color='red', label='rMean')
-std=plt.plot(rolstd, color='black', label='rStd')
+rolmean = df_ts['Close'].rolling(window=12).mean()
+rolstd = df_ts['Close'].rolling(window=12).std()
+std = plt.plot(rolstd, color='black', label='rStd')
+
 plt.legend(loc='best')
 plt.title('Rolling Mean & STD')
 plt.show(block=False)
@@ -276,7 +279,7 @@ ts_logScale.head()
 
 from statsmodels.tsa.seasonal import seasonal_decompose
 ts_logScale.dropna(inplace=True)
-decomposition = seasonal_decompose(ts_logScale, freq=30)
+decomposition = seasonal_decompose(ts_logScale, period=30)
 trend =decomposition.trend
 seasonal=decomposition.seasonal
 residual=decomposition.resid
@@ -341,9 +344,9 @@ plt.tight_layout()
 # In[114]:
 
 
-from statsmodels.tsa.arima_model import ARIMA
+from statsmodels.tsa.arima.model import ARIMA
 model=ARIMA(ts_logScale, order=(1,1,1))
-results_AR = model.fit (disp=-1)
+results_AR = model.fit()
 plt.plot(ts_LogDiffShifting)
 plt.plot(results_AR.fittedvalues, color='red')
 plt.title('RSS: %.4f'% sum((results_AR.fittedvalues-ts_LogDiffShifting)**2))
@@ -354,49 +357,30 @@ print('Plotting AR Model')
 
 
 model=ARIMA(ts_logScale, order=(1,1,1))
-results_ARIMA = model.fit (disp=-1)
+results_ARIMA = model.fit()
 plt.plot(ts_LogDiffShifting)
 plt.plot(results_AR.fittedvalues, color='red')
 plt.title('RSS: %.4f'% sum((results_AR.fittedvalues-ts_LogDiffShifting)**2))
 
-
 # In[117]:
-
-
-predicitons_ARIMA_diff=pd.Series(results_ARIMA.fittedvalues, copy=True)
+predicitons_ARIMA_diff = pd.Series(results_ARIMA.fittedvalues, copy=True)
 print(predicitons_ARIMA_diff.head())
 
-
 # In[118]:
-
-
-predicitons_ARIMA_diff_cumsum=predicitons_ARIMA_diff.cumsum()
-print(predicitons_ARIMA_diff_cumsum)
-
+predicitons_ARIMA_diff_cumsum = predicitons_ARIMA_diff.cumsum()
+print(predicitons_ARIMA_diff_cumsum.head())
 
 # In[121]:
-
-
-predictions_ARIMA_log=pd.Series(ts_logScale.ix[0], index=ts_logScale.index)
-predictions_ARIMA_log=predictions_ARIMA_log.add(predicitons_ARIMA_diff_cumsum, fill_value=0)
-
+predictions_ARIMA_log = pd.Series(ts_logScale.iloc[0], index=ts_logScale.index)
+predictions_ARIMA_log = predictions_ARIMA_log.add(predicitons_ARIMA_diff_cumsum, fill_value=0)
 
 # In[123]:
-
-
-predictions_ARIMA_log.head()
-
+print(predictions_ARIMA_log.head())
 
 # In[124]:
-
-
-predicitons_ARIMA=np.exp(predictions_ARIMA_log)
+predicitons_ARIMA = np.exp(predictions_ARIMA_log)
 plt.plot(ts)
 plt.plot(predicitons_ARIMA)
-
-
-# In[125]:
-
 
 ts_logScale
 
@@ -404,7 +388,7 @@ ts_logScale
 # In[127]:
 
 
-results_ARIMA.plot_predict(1,9575)
+results_ARIMA.get_forecast(steps=9575).predicted_mean.plot()
 
 
 # In[132]:
